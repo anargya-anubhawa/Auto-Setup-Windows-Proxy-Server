@@ -4,7 +4,7 @@
 
 ## 🎯 Fitur
 
-- Deteksi otomatis **default gateway** dari koneksi Wi-Fi (misalnya tethering HP).
+- Deteksi otomatis **default gateway** dari koneksi Wi-Fi.
 - Atur dan aktifkan proxy Windows ke `IP_GATEWAY:PORT` dengan sekali klik.
 - Nonaktifkan dan bersihkan pengaturan proxy hanya dengan sekali klik.
 - Port proxy bisa dikustomisasi saat input.
