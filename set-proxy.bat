@@ -1,6 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: Menampilkan informasi awal
 :menu
 cls
 echo ===============================================
@@ -19,22 +20,20 @@ echo.
 :: Mengecek status proxy
 for /f "tokens=3" %%a in ('reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyEnable 2^>nul ^| find "ProxyEnable"') do set /a proxyStatus=%%a
 if "%proxyStatus%" EQU "1" (
-    echo.
-    echo [92mStatus Proxy Server: ON[0m
+    powershell -Command "Write-Host 'Status Proxy Server: ON' -ForegroundColor Green"
 ) else (
-    echo.
-    echo [91mStatus Proxy Server: OFF[0m
+    powershell -Command "Write-Host 'Status Proxy Server: OFF' -ForegroundColor Red"
 )
 
 :: Mengecek port proxy
 for /f "tokens=3" %%a in ('reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyServer 2^>nul ^| find "ProxyServer"') do set proxyPort=%%a
 if defined proxyPort (
-    echo [93mProxy berjalan pada: !proxyPort![0m
+    powershell -Command "Write-Host 'Proxy berjalan pada: !proxyPort!' -ForegroundColor Yellow"
 ) else (
     echo Proxy belum dikonfigurasi atau nonaktif.
 )
 
-:: Menu
+:: Menu pilihan
 echo.
 echo Pilih opsi:
 echo 1. Enable and Auto Setup Proxy Server
@@ -47,7 +46,6 @@ if "%choice%"=="1" goto set_proxy
 if "%choice%"=="2" goto disable_proxy
 if "%choice%"=="3" goto info
 if "%choice%"=="4" exit
-
 if "%choice%"=="" goto menu
 
 :: Opsi 1: Setel Proxy Server
@@ -55,7 +53,7 @@ if "%choice%"=="" goto menu
 cls
 echo ===============================================
 echo.
-echo [93mRunning Auto Set Proxy Server...[0m
+powershell -Command "Write-Host 'Running Auto Set Proxy Server...' -ForegroundColor Yellow"
 echo.
 echo ===============================================
 echo.
@@ -66,6 +64,7 @@ for /f "tokens=2 delims=:" %%a in ('netsh interface ip show config ^| find "Defa
     set gateway=%%a
     set gateway=!gateway:~1!
 )
+set gateway=!gateway: =!
 
 :: Mengecek apakah gateway ditemukan
 if not defined gateway (
@@ -74,23 +73,23 @@ if not defined gateway (
     goto menu
 )
 
-echo IP Gateway yang digunakan: [93m!gateway![0m
+powershell -Command "Write-Host 'IP Gateway yang digunakan: !gateway!' -ForegroundColor Yellow"
 
 :: Meminta input port dari user, jika kosong set port default ke 7071
 set /p port=Masukkan port untuk proxy server (default: 7071): 
-
-:: Cek port kosong
 if not defined port (
     set port=7071
     echo Port tidak dimasukkan. Menggunakan port default 7071.
 )
 
-:: Apply proxy ke registry
+:: Simpan pengaturan registry
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyEnable /t REG_DWORD /d 1 /f
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyServer /t REG_SZ /d "!gateway!:!port!" /f
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyOverride /t REG_SZ /d "" /f
 
-:: Refresh status proxy
+:: Trigger perubahan setting proxy
+powershell -Command "Add-Type -MemberDefinition '[DllImport(\"wininet.dll\", SetLastError=true)] public static extern bool InternetSetOption(int hInternet, int dwOption, IntPtr lpBuffer, int dwBufferLength);' -Namespace Win32Functions -Name WinInetOptions; [Win32Functions.WinInetOptions]::InternetSetOption(0, 39, [IntPtr]::Zero, 0); [Win32Functions.WinInetOptions]::InternetSetOption(0, 37, [IntPtr]::Zero, 0)"
+
 pause
 goto menu
 
@@ -99,16 +98,19 @@ goto menu
 cls
 echo ===============================================
 echo.
-echo [93mStopping Proxy Server and Clearing IP Configuration[0m
+powershell -Command "Write-Host 'Stopping Proxy Server and Clearing IP Configuration' -ForegroundColor Yellow"
 echo.
 echo ===============================================
 echo.
 
-:: Menonaktifkan pengaturan Proxy
+:: Nonaktifkan Proxy
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyServer /f
 
-:: Mengosongkan pengaturan IP
+:: Trigger perubahan setting proxy
+powershell -Command "Add-Type -MemberDefinition '[DllImport(\"wininet.dll\", SetLastError=true)] public static extern bool InternetSetOption(int hInternet, int dwOption, IntPtr lpBuffer, int dwBufferLength);' -Namespace Win32Functions -Name WinInetOptions; [Win32Functions.WinInetOptions]::InternetSetOption(0, 39, [IntPtr]::Zero, 0); [Win32Functions.WinInetOptions]::InternetSetOption(0, 37, [IntPtr]::Zero, 0)"
+
+:: Reset IP ke DHCP
 netsh interface ip set address name="Ethernet" source=dhcp
 netsh interface ip set address name="Wi-Fi" source=dhcp
 
@@ -116,13 +118,14 @@ echo Proxy telah dimatikan dan pengaturan IP telah direset ke otomatis.
 pause
 goto menu
 
+:: Opsi 3: Informasi
 :info
 cls
 echo ===============================================
 echo.
-echo Script ini dibuat oleh Anargya [ [93mhttps://anargya.my.id[0m ].
+powershell -Command "Write-Host 'Script ini dibuat oleh Anargya [ https://anargya.my.id ]' -ForegroundColor Yellow"
 echo Jika ada pertanyaan atau feedback, hubungi: anargya.dev@gmail.com
-echo Script version 1.2
+echo Script version 1.3
 echo.
 echo ===============================================
 echo.
